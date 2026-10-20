@@ -2825,6 +2825,7 @@ function ThreadDetailViewInternal(
             }}
             secondaryPanel={{
               canNavigateTabs: isFocused,
+              canToggleFullScreen: isFocused && !isPaneMaximized,
               activeTab: activeFixedSecondaryTab,
               canUseGitUi,
               gitDiffTabStatus,
