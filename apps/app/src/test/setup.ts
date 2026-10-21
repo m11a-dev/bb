@@ -1,6 +1,7 @@
 /// <reference types="vitest/jsdom" />
 
 import "@bb/shared-ui/icon-extended";
+import { beforeEach } from "vitest";
 
 if (typeof globalThis.navigator === "undefined") {
   Object.defineProperty(globalThis, "navigator", {
@@ -17,6 +18,14 @@ if (typeof window !== "undefined" && typeof jsdom !== "undefined") {
   Object.defineProperty(window, "sessionStorage", {
     configurable: true,
     value: jsdom.window.sessionStorage,
+  });
+}
+
+if (typeof window !== "undefined") {
+  beforeEach(() => {
+    try {
+      window.sessionStorage.clear();
+    } catch {}
   });
 }
 

@@ -6,6 +6,10 @@ import {
   type BrowserFixedPanelTab,
 } from "@bb/client-core";
 import { getLocalStorage } from "./browser-storage";
+import {
+  isWindowScopedEmptyValue,
+  stripWindowScopedSlotSuffix,
+} from "./window-scoped-storage";
 
 export {
   FIXED_PANEL_TABS_STATE_STORAGE_VERSION,
@@ -91,7 +95,14 @@ export function pruneFixedPanelTabsStorage({
   }
 
   for (const key of keys) {
-    if (shouldPruneStoredFixedPanelTabsState(localStorage.getItem(key), now)) {
+    const storedValue = localStorage.getItem(key);
+    const comparedValue = isWindowScopedEmptyValue(storedValue)
+      ? localStorage.getItem(stripWindowScopedSlotSuffix(key))
+      : storedValue;
+    if (
+      comparedValue === null ||
+      shouldPruneStoredFixedPanelTabsState(comparedValue, now)
+    ) {
       localStorage.removeItem(key);
     }
   }

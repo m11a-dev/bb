@@ -62,8 +62,29 @@ export type BbDesktopOpenNewTabHandler = () => void;
 export type BbDesktopAppCommandHandler = (command: AppCommandId) => void;
 export type BbDesktopCloseWindowRequestHandler = () => boolean;
 
+const BB_DESKTOP_WINDOW_KEY_ARGUMENT_PREFIX = "--bb-window-key=";
+
+export function formatBbDesktopWindowKeyArgument(windowKey: string): string {
+  return `${BB_DESKTOP_WINDOW_KEY_ARGUMENT_PREFIX}${windowKey}`;
+}
+
+export function readBbDesktopWindowKeyArgument(
+  argv: readonly string[],
+): string | undefined {
+  const argument = argv.find((value) =>
+    value.startsWith(BB_DESKTOP_WINDOW_KEY_ARGUMENT_PREFIX),
+  );
+  const windowKey = argument?.slice(
+    BB_DESKTOP_WINDOW_KEY_ARGUMENT_PREFIX.length,
+  );
+  return windowKey === undefined || windowKey.length === 0
+    ? undefined
+    : windowKey;
+}
+
 export interface BbDesktopApi extends BbDesktopInfo {
   browser: BbDesktopBrowserApi;
+  windowKey?: string;
   getServerChoices?(): Promise<BbDesktopServerChoice[]>;
   onServerChoicesChange?(
     listener: (choices: BbDesktopServerChoice[]) => void,

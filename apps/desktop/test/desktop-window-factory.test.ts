@@ -364,6 +364,34 @@ describe("desktop window factory", () => {
     ]);
   });
 
+  it("hands each window its state key, and the same key after a restart", async () => {
+    const generatedStateKeys: WindowStateKey[] = ["window-second"];
+    const { createdWindows, factory, userDataPath } =
+      await createFactoryHarness({
+        createWindowStateKey() {
+          return generatedStateKeys.shift() ?? "window-fallback";
+        },
+      });
+    await factory.createWindow({ initialUrl: null, stateKey: null });
+    await factory.createWindow({ initialUrl: null, stateKey: null });
+
+    expect(
+      createdWindows.map(
+        (window) => window.options.webPreferences?.additionalArguments,
+      ),
+    ).toEqual([["--bb-window-key=main"], ["--bb-window-key=window-second"]]);
+
+    await factory.persistOpenWindows();
+    const restarted = await createFactoryHarness({ userDataPath });
+    await restarted.factory.restoreSavedWindows({ initialUrl: null });
+
+    expect(
+      restarted.createdWindows.map(
+        (window) => window.options.webPreferences?.additionalArguments,
+      ),
+    ).toEqual([["--bb-window-key=main"], ["--bb-window-key=window-second"]]);
+  });
+
   it("allocates distinct state keys for concurrent implicit windows", async () => {
     const generatedStateKeys: WindowStateKey[] = ["window-concurrent"];
     const { createdWindows, factory, userDataPath } =

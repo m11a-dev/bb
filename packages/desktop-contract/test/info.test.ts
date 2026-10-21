@@ -55,3 +55,21 @@ describe("bbDesktopInfoSchema", () => {
     ).toBe(false);
   });
 });
+
+describe("desktop window key argument", () => {
+  it("round-trips a window key through the renderer's argv", async () => {
+    const { formatBbDesktopWindowKeyArgument, readBbDesktopWindowKeyArgument } =
+      await import("../src/info.js");
+    expect(
+      readBbDesktopWindowKeyArgument([
+        "/Applications/bb.app",
+        "--type=renderer",
+        formatBbDesktopWindowKeyArgument("window-2"),
+      ]),
+    ).toBe("window-2");
+    expect(readBbDesktopWindowKeyArgument(["--type=renderer"])).toBeUndefined();
+    expect(
+      readBbDesktopWindowKeyArgument([formatBbDesktopWindowKeyArgument("")]),
+    ).toBeUndefined();
+  });
+});

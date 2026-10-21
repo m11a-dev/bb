@@ -1,5 +1,6 @@
 import {
   bbDesktopServerChoicesSchema,
+  readBbDesktopWindowKeyArgument,
   type BbDesktopServerChoice,
 } from "@bb/desktop-contract";
 import { contextBridge, ipcRenderer, webFrame } from "electron";
@@ -427,6 +428,7 @@ const bbDesktopApi: BbDesktopApi = {
     return currentInfo.updateDownloaded;
   },
   version: currentInfo.version,
+  windowKey: readBbDesktopWindowKeyArgument(process.argv),
   checkForUpdates() {
     return invokeDesktopInfo(BB_DESKTOP_CHECK_FOR_UPDATES_CHANNEL);
   },

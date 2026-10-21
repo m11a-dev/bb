@@ -24,6 +24,7 @@ import {
   createThreadInfoFixedPanelTab,
   getFixedPanelTabsStateStorageKey,
 } from "@/lib/fixed-panel-tabs-state";
+import { stripWindowScopedSlotSuffix } from "@/lib/window-scoped-storage";
 
 const SIDEBAR_SPLIT_LAYOUT_STORAGE_VERSION = 1;
 const SIDEBAR_SPLIT_LAYOUT_STORAGE_PREFIX =
@@ -992,7 +993,9 @@ export function pruneSidebarSplitStorage({
   }
 
   for (const splitKey of splitKeys) {
-    const panelStateId = splitKey.slice(keyPrefix.length);
+    const panelStateId = stripWindowScopedSlotSuffix(splitKey).slice(
+      keyPrefix.length,
+    );
     const fixedPanelTabsKey = getFixedPanelTabsStateStorageKey({
       threadId: panelStateId,
     });
