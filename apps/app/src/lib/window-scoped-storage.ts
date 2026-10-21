@@ -84,8 +84,9 @@ export function readWindowScopedItem(
   if (own === WINDOW_SCOPED_EMPTY_VALUE) return null;
   if (own !== null) return own;
   const seed = safeGet(backends.local, key);
+  if (seed === null) return null;
   try {
-    slot.storage?.setItem(slot.key, seed ?? WINDOW_SCOPED_EMPTY_VALUE);
+    slot.storage?.setItem(slot.key, seed);
   } catch {}
   return seed;
 }

@@ -96,13 +96,15 @@ export function pruneFixedPanelTabsStorage({
 
   for (const key of keys) {
     const storedValue = localStorage.getItem(key);
-    const comparedValue = isWindowScopedEmptyValue(storedValue)
-      ? localStorage.getItem(stripWindowScopedSlotSuffix(key))
-      : storedValue;
-    if (
-      comparedValue === null ||
-      shouldPruneStoredFixedPanelTabsState(comparedValue, now)
-    ) {
+    const baseKey = stripWindowScopedSlotSuffix(key);
+    const sharedValue = baseKey === key ? null : localStorage.getItem(baseKey);
+    const isSlotExpired =
+      isWindowScopedEmptyValue(storedValue) ||
+      shouldPruneStoredFixedPanelTabsState(storedValue, now);
+    const isThreadLive =
+      sharedValue !== null &&
+      !shouldPruneStoredFixedPanelTabsState(sharedValue, now);
+    if (isSlotExpired && !isThreadLive) {
       localStorage.removeItem(key);
     }
   }

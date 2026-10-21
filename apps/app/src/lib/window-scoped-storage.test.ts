@@ -48,6 +48,38 @@ describe("window-scoped storage", () => {
     expect(readWindowScopedItem("key", desktopWindow("main"))).toBeNull();
   });
 
+  it("keeps following the seed until a window has one to adopt", () => {
+    expect(readWindowScopedItem("key", desktopWindow("main"))).toBeNull();
+    writeWindowScopedItem("key", "from-window-2", desktopWindow("window-2"));
+
+    expect(readWindowScopedItem("key", desktopWindow("main"))).toBe(
+      "from-window-2",
+    );
+    writeWindowScopedItem("key", "from-window-3", desktopWindow("window-3"));
+    expect(readWindowScopedItem("key", desktopWindow("main"))).toBe(
+      "from-window-2",
+    );
+  });
+
+  it("keeps a window's older slot while its thread is still in use", () => {
+    const now = Date.now();
+    const key = getFixedPanelTabsStateStorageKey({ threadId: "thr_mixed" });
+    const old = serializeFixedPanelTabsState({
+      state: createEmptyFixedPanelTabsState({ lastUsedAt: 0 }),
+    });
+    const live = serializeFixedPanelTabsState({
+      state: createEmptyFixedPanelTabsState({ lastUsedAt: now }),
+    });
+    writeWindowScopedItem(key, old, desktopWindow("window-2"));
+    writeWindowScopedItem(key, live, desktopWindow("main"));
+
+    pruneFixedPanelTabsStorage({ now });
+
+    expect(
+      window.localStorage.getItem(windowScopedSlotKey(key, "window-2")),
+    ).toBe(old);
+  });
+
   it("strips the window suffix from a slot key, including encoded keys", () => {
     const slot = windowScopedSlotKey("bb.key.thr_1", "window#=/2");
     expect(slot).not.toBe("bb.key.thr_1");

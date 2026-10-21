@@ -124,6 +124,7 @@ describe.each<WindowMode>(["desktop", "browser"])(
       monitorA.setPanel(panelShowing(FILES_TAB.id));
       monitorA.setCollapsed(true);
       monitorA.setWidth(70);
+      monitorA.receiveStorageEventsFromOtherWindows();
 
       const monitorB = await openWindow("window-2", mode);
       expect(monitorB.collapsed()).toBe(true);
@@ -134,12 +135,10 @@ describe.each<WindowMode>(["desktop", "browser"])(
       monitorB.setPanel(panelShowing(TERMINAL_TAB.id));
       monitorB.setWidth(35);
 
-      const liveA = await openWindow("main", mode);
-      liveA.receiveStorageEventsFromOtherWindows();
       broadcastLocalStorageChanges();
-      expect(liveA.collapsed()).toBe(true);
-      expect(liveA.panel().secondary.activeTabId).toBe(FILES_TAB.id);
-      expect(liveA.width()).toBe(70);
+      expect(monitorA.collapsed()).toBe(true);
+      expect(monitorA.panel().secondary.activeTabId).toBe(FILES_TAB.id);
+      expect(monitorA.width()).toBe(70);
 
       const reloadedB = await openWindow("window-2", mode);
       expect(reloadedB.collapsed()).toBe(false);
