@@ -1578,7 +1578,11 @@ describe("SidebarSplitContainer", () => {
 
     fireEvent.pointerDown(screen.getByTestId("only-pane"));
     expect(
-      setItem.mock.calls.filter(([key]) => key === storageKey),
+      setItem.mock.calls.filter(
+        ([key], index) =>
+          key === storageKey &&
+          setItem.mock.contexts[index] === window.localStorage,
+      ),
     ).toHaveLength(0);
     expect(window.localStorage.getItem(storageKey)).toBeNull();
   });
@@ -1597,8 +1601,60 @@ describe("SidebarSplitContainer", () => {
     });
 
     expect(
-      setItem.mock.calls.filter(([key]) => key === storageKey),
+      setItem.mock.calls.filter(
+        ([key], index) =>
+          key === storageKey &&
+          setItem.mock.contexts[index] === window.localStorage,
+      ),
     ).toHaveLength(0);
+  });
+
+  describe("with one thread in two desktop windows", () => {
+    const storageKey = sidebarSplitStorageKey(PANEL_STATE_ID);
+
+    function openDesktopWindow(windowKey: string) {
+      cleanup();
+      window.sessionStorage.clear();
+      Reflect.set(window, "bbDesktop", { windowKey });
+      return renderContainer({
+        renderPane: ({ paneId }) => <div>{paneId}</div>,
+      });
+    }
+
+    beforeEach(() => {
+      window.sessionStorage.clear();
+      window.localStorage.setItem(
+        getFixedPanelTabsStateStorageKey({ threadId: PANEL_STATE_ID }),
+        JSON.stringify({ lastUsedAt: Date.now() }),
+      );
+    });
+
+    afterEach(() => {
+      Reflect.deleteProperty(window, "bbDesktop");
+    });
+
+    it("keeps each window's split after the other window changes its own", () => {
+      persistState(createTwoPaneState());
+      openDesktopWindow("main");
+      expect(listPaneIds()).toHaveLength(2);
+
+      openDesktopWindow("window-2");
+      expect(listPaneIds()).toHaveLength(2);
+      window.localStorage.removeItem(storageKey);
+
+      openDesktopWindow("main");
+      expect(listPaneIds()).toHaveLength(2);
+    });
+
+    it("prunes no window's split while its thread is in use", () => {
+      persistState(createTwoPaneState());
+      openDesktopWindow("main");
+      openDesktopWindow("window-2");
+      window.localStorage.removeItem(storageKey);
+      openDesktopWindow("main");
+      openDesktopWindow("main");
+      expect(listPaneIds()).toHaveLength(2);
+    });
   });
 
   it("uses the canonical layout when localStorage rejects the read", () => {

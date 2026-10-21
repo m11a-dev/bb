@@ -31,6 +31,10 @@ import { IframeDragGuardOverlay } from "@/lib/iframe-drag-guard";
 import { MACOS_APP_REGION_NO_DRAG_CLASS } from "@/lib/bb-desktop";
 import { withLocalStorage } from "@/lib/browser-storage";
 import {
+  readWindowScopedItem,
+  writeWindowScopedItem,
+} from "@/lib/window-scoped-storage";
+import {
   PaneContext,
   type PaneContextValue,
 } from "@/views/thread-detail/PaneContext";
@@ -160,7 +164,7 @@ export function SidebarSplitContainer({
   const availableTabIds = useMemo(() => tabs.map((tab) => tab.id), [tabs]);
   const storageKey = sidebarSplitStorageKey(panelStateId);
   const [initialStorageValue] = useState<string | null>(() =>
-    withLocalStorage((storage) => storage.getItem(storageKey), null),
+    readWindowScopedItem(storageKey),
   );
   const [state, setState] = useState<SidebarSplitState>(() => {
     const restored =
@@ -285,11 +289,7 @@ export function SidebarSplitContainer({
       return;
     }
     try {
-      if (persistedValue === null) {
-        window.localStorage.removeItem(storageKey);
-      } else {
-        window.localStorage.setItem(storageKey, persistedValue);
-      }
+      writeWindowScopedItem(storageKey, persistedValue);
       lastPersistedValueRef.current = { storageKey, value: persistedValue };
     } catch (error) {
       console.warn(

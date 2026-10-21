@@ -1,4 +1,5 @@
 import type { BrowserWindowConstructorOptions, Event } from "electron";
+import { formatBbDesktopWindowKeyArgument } from "@bb/desktop-contract";
 import {
   MIN_WINDOW_HEIGHT,
   MIN_WINDOW_WIDTH,
@@ -140,6 +141,7 @@ interface CreateWindowOptionsArgs {
   isMac: boolean;
   isLinuxFrameless: boolean;
   preloadPath: string;
+  stateKey: WindowStateKey;
 }
 
 function resolveWindowStateKey(
@@ -188,6 +190,7 @@ function createWindowOptions(
     show: false,
     title: "bb",
     webPreferences: {
+      additionalArguments: [formatBbDesktopWindowKeyArgument(args.stateKey)],
       contextIsolation: true,
       nodeIntegration: false,
       preload: args.preloadPath,
@@ -245,6 +248,7 @@ export function createDesktopWindowFactory(
           isMac: args.isMac,
           isLinuxFrameless: args.isLinuxFrameless,
           preloadPath: args.preloadPath,
+          stateKey,
         }),
       );
       if (!args.isLinuxTransparent) {

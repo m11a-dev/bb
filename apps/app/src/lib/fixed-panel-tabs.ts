@@ -11,7 +11,6 @@ import { useAtomValue, useSetAtom, useStore } from "jotai";
 import { atomWithStorage } from "jotai/utils";
 import { atomFamily } from "jotai-family";
 import type { TerminalCreateTarget } from "@bb/server-contract";
-import { createLocalStorageSyncStorage } from "./browser-storage";
 import { hasThreadId } from "./thread-id";
 import { useThreadTabs } from "@/hooks/queries/thread-tabs-query";
 import {
@@ -34,6 +33,7 @@ import {
   type FixedPanelViewTab,
 } from "./fixed-panel-tabs-state";
 import { type ThreadSecondaryPanel } from "./thread-secondary-panel";
+import { createWindowScopedStorage } from "./window-scoped-storage";
 import {
   areThreadTabListsEquivalent,
   hasPendingThreadTabsWrite,
@@ -76,7 +76,7 @@ function touchFixedPanelTabsState(
 }
 
 const fixedPanelTabsStateStorage =
-  createLocalStorageSyncStorage<FixedPanelTabsState>({
+  createWindowScopedStorage<FixedPanelTabsState>({
     parse: (storedValue, initialValue) =>
       parseFixedPanelTabsState({
         initialValue,
@@ -106,7 +106,9 @@ export function resetFixedPanelTabsStateForTest(): void {
   fixedPanelTabsStateAtomFamily.setShouldRemove(null);
 }
 
-function getFixedPanelTabsStateAtom(threadId: string | null | undefined) {
+export function getFixedPanelTabsStateAtom(
+  threadId: string | null | undefined,
+) {
   return hasThreadId(threadId)
     ? fixedPanelTabsStateAtomFamily(threadId)
     : disabledFixedPanelTabsStateAtom;
