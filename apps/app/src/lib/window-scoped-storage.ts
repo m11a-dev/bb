@@ -75,14 +75,19 @@ function safeGet(storage: Storage | null, key: string): string | null {
   }
 }
 
+interface WindowScopedReadOptions {
+  seedsNewWindows?: boolean;
+}
+
 export function readWindowScopedItem(
   key: string,
   backends: WindowScopedStorageBackends = resolveWindowScopedStorageBackends(),
+  { seedsNewWindows = true }: WindowScopedReadOptions = {},
 ): string | null {
   const slot = slotLocation(key, backends);
   const own = safeGet(slot.storage, slot.key);
   if (own === WINDOW_SCOPED_EMPTY_VALUE) return null;
-  if (own !== null) return own;
+  if (own !== null || !seedsNewWindows) return own;
   const seed = safeGet(backends.local, key);
   if (seed === null) return null;
   try {
@@ -107,10 +112,18 @@ export function writeWindowScopedItem(
 
 export function createWindowScopedStorage<T>(
   codec: StoredValueCodec<T>,
+  options: WindowScopedReadOptions = {},
 ): SyncStorage<T> {
   return {
     getItem: (key, initialValue) =>
-      codec.parse(readWindowScopedItem(key), initialValue),
+      codec.parse(
+        readWindowScopedItem(
+          key,
+          resolveWindowScopedStorageBackends(),
+          options,
+        ),
+        initialValue,
+      ),
     setItem: (key, value) => {
       try {
         writeWindowScopedItem(key, codec.serialize(value));

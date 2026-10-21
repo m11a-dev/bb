@@ -33,14 +33,17 @@ export const secondaryPanelWidthPercentAtom = atomWithStorage<number>(
 const THREAD_CONVERSATION_COLLAPSED_STORAGE_PREFIX =
   "bb.thread.conversation.collapsed";
 
-const threadConversationCollapsedStorage = createWindowScopedStorage<boolean>({
-  parse: (storedValue, initialValue) => {
-    if (storedValue === "true") return true;
-    if (storedValue === "false") return false;
-    return initialValue;
+const threadConversationCollapsedStorage = createWindowScopedStorage<boolean>(
+  {
+    parse: (storedValue, initialValue) => {
+      if (storedValue === "true") return true;
+      if (storedValue === "false") return false;
+      return initialValue;
+    },
+    serialize: (value) => String(value),
   },
-  serialize: (value) => String(value),
-});
+  { seedsNewWindows: false },
+);
 
 const threadConversationCollapsedAtomFamily = atomFamily(
   (threadId: ResolvedThreadSecondaryPanelThreadId) =>

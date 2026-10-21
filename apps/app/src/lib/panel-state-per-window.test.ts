@@ -127,7 +127,7 @@ describe.each<WindowMode>(["desktop", "browser"])(
       monitorA.receiveStorageEventsFromOtherWindows();
 
       const monitorB = await openWindow("window-2", mode);
-      expect(monitorB.collapsed()).toBe(true);
+      expect(monitorB.collapsed()).toBe(false);
       expect(monitorB.panel().secondary.activeTabId).toBe(FILES_TAB.id);
       expect(monitorB.width()).toBe(70);
 
@@ -160,14 +160,14 @@ describe.each<WindowMode>(["desktop", "browser"])(
       first.setCollapsed(true);
 
       const adopter = await openWindow("window-2", mode);
-      expect(adopter.collapsed()).toBe(true);
+      expect(adopter.collapsed()).toBe(false);
 
       const third = await openWindow("window-3", mode);
       third.setCollapsed(false);
       third.setPanel(panelShowing(TERMINAL_TAB.id, false));
 
       const reloadedAdopter = await openWindow("window-2", mode);
-      expect(reloadedAdopter.collapsed()).toBe(true);
+      expect(reloadedAdopter.collapsed()).toBe(false);
       expect(reloadedAdopter.panel().secondary).toMatchObject({
         activeTabId: FILES_TAB.id,
         isOpen: true,

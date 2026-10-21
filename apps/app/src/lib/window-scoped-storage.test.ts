@@ -80,6 +80,21 @@ describe("window-scoped storage", () => {
     ).toBe(old);
   });
 
+  it("never seeds a new window from another window when seeding is off", () => {
+    writeWindowScopedItem("key", "true", desktopWindow("main"));
+
+    expect(
+      readWindowScopedItem("key", desktopWindow("window-2"), {
+        seedsNewWindows: false,
+      }),
+    ).toBeNull();
+    expect(
+      readWindowScopedItem("key", desktopWindow("main"), {
+        seedsNewWindows: false,
+      }),
+    ).toBe("true");
+  });
+
   it("strips the window suffix from a slot key, including encoded keys", () => {
     const slot = windowScopedSlotKey("bb.key.thr_1", "window#=/2");
     expect(slot).not.toBe("bb.key.thr_1");
