@@ -94,6 +94,7 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
+          check-latest: true
           registry-url: https://registry.npmjs.org
 
       - name: Ensure npm supports trusted publishing
@@ -281,6 +282,7 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
+          check-latest: true
           registry-url: https://registry.npmjs.org
 
       - name: Ensure npm supports trusted publishing
@@ -418,6 +420,7 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
+          check-latest: true
           registry-url: https://registry.npmjs.org
 
       - name: Ensure npm supports trusted publishing
@@ -541,6 +544,7 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.x
+          check-latest: true
           cache: pnpm
 
       - name: Verify arm64 runner
@@ -681,6 +685,7 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.x
+          check-latest: true
           cache: pnpm
 
       - name: Install dependencies
@@ -781,6 +786,7 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.x
+          check-latest: true
           package-manager-cache: false
 
       - name: Set up pnpm

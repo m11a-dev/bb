@@ -22,6 +22,7 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.x
+          check-latest: true
 
       - name: Check version lockstep
         run: node .github/workflows/check-version-lockstep.mjs
@@ -46,6 +47,7 @@ jobs:
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22.x
+          check-latest: true
 
       - name: Check plugin SDK version bump
         run: node .github/workflows/check-plugin-sdk-version.mjs
