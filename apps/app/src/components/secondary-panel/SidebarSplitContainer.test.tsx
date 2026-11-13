@@ -22,6 +22,7 @@ import {
   moveSidebarTab,
   parseSidebarSplitState,
   serializeSidebarSplitState,
+  setSidebarFullScreenScope,
   sidebarSplitStorageKey,
   type SidebarSplitState,
 } from "./sidebarSplitLayout";
@@ -779,6 +780,292 @@ describe("SidebarSplitContainer", () => {
       panes.filter((pane) => pane.getAttribute("aria-hidden") === "true"),
     ).toHaveLength(1);
     expect(onToggleFullScreen).not.toHaveBeenCalled();
+  });
+
+  describe("full screen with all panes", () => {
+    function FullScreenPane({
+      isFullScreenAllPanes,
+      isMaximized,
+      onMoveActiveTabToSide,
+      onToggleFullScreenAllPanes,
+      onToggleMaximize,
+      paneId,
+    }: Pick<
+      SidebarSplitPaneRenderArgs,
+      | "isFullScreenAllPanes"
+      | "isMaximized"
+      | "onMoveActiveTabToSide"
+      | "onToggleFullScreenAllPanes"
+      | "onToggleMaximize"
+      | "paneId"
+    >) {
+      return (
+        <div>
+          <button type="button" onClick={onToggleMaximize}>
+            {isMaximized || isFullScreenAllPanes
+              ? `Exit ${paneId}`
+              : `Maximize ${paneId}`}
+          </button>
+          {onToggleFullScreenAllPanes ? (
+            <button type="button" onClick={onToggleFullScreenAllPanes}>
+              All panes {paneId}
+            </button>
+          ) : null}
+          {onMoveActiveTabToSide ? (
+            <button
+              type="button"
+              onClick={() => onMoveActiveTabToSide("bottom")}
+            >
+              Split {paneId}
+            </button>
+          ) : null}
+        </div>
+      );
+    }
+
+    function FullScreenHarness({
+      hostDeclines = false,
+      initialFullScreen = false,
+    }: {
+      hostDeclines?: boolean;
+      initialFullScreen?: boolean;
+    }) {
+      const [isFullScreen, setIsFullScreen] = useState(initialFullScreen);
+      return (
+        <>
+          <output data-testid="full-screen">
+            {isFullScreen ? "full screen" : "conversation visible"}
+          </output>
+          <SidebarSplitContainer
+            activeTabId="tab-a"
+            isFullScreen={isFullScreen}
+            onActivateTab={vi.fn()}
+            onGlobalTabReorder={vi.fn()}
+            onToggleFullScreen={() => {
+              if (!hostDeclines) setIsFullScreen((current) => !current);
+            }}
+            panelStateId={PANEL_STATE_ID}
+            renderPane={(pane) => <FullScreenPane {...pane} />}
+            tabs={TABS}
+          />
+        </>
+      );
+    }
+
+    function renderFullScreenHarness(
+      initialFullScreen = false,
+      hostDeclines = false,
+    ) {
+      return render(
+        <SidebarProvider>
+          <TooltipProvider>
+            <FullScreenHarness
+              hostDeclines={hostDeclines}
+              initialFullScreen={initialFullScreen}
+            />
+          </TooltipProvider>
+        </SidebarProvider>,
+      );
+    }
+
+    function expectEveryPaneVisible() {
+      const panes = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-split-pane-id]"),
+      );
+      expect(panes.length).toBeGreaterThan(1);
+      for (const pane of panes) {
+        expect(pane.dataset.maximized).toBeUndefined();
+        expect(pane.getAttribute("aria-hidden")).toBeNull();
+      }
+      for (const separator of screen.getAllByRole("separator")) {
+        expect(separator.className).not.toContain("invisible");
+      }
+    }
+
+    it("collapses the conversation, keeps every pane visible, and exits from any pane", () => {
+      persistState(createTwoPaneState());
+      renderFullScreenHarness();
+      const [firstPaneId, secondPaneId] = listPaneIds();
+      if (firstPaneId === undefined || secondPaneId === undefined) {
+        throw new Error("Expected two split panes");
+      }
+
+      fireEvent.click(
+        screen.getByRole("button", { name: `All panes ${firstPaneId}` }),
+      );
+
+      expect(screen.getByTestId("full-screen").textContent).toBe("full screen");
+      expectEveryPaneVisible();
+      expect(
+        screen.getByRole("button", { name: `Exit ${firstPaneId}` }),
+      ).not.toBeNull();
+      expect(screen.queryByRole("button", { name: /^All panes / })).toBeNull();
+
+      fireEvent.click(
+        screen.getByRole("button", { name: `Exit ${secondPaneId}` }),
+      );
+
+      expect(screen.getByTestId("full-screen").textContent).toBe(
+        "conversation visible",
+      );
+      expectEveryPaneVisible();
+      expect(
+        screen.getByRole("button", { name: `Maximize ${secondPaneId}` }),
+      ).not.toBeNull();
+    });
+
+    it("offers the all-panes action only when the panel is split", () => {
+      renderFullScreenHarness();
+      expect(
+        screen.getAllByRole("button", { name: /^Maximize / }),
+      ).toHaveLength(1);
+      expect(screen.queryByRole("button", { name: /^All panes / })).toBeNull();
+    });
+
+    it("keeps one-pane full screen unchanged and resets the scope on exit", () => {
+      persistState(createTwoPaneState());
+      renderFullScreenHarness();
+      const [firstPaneId] = listPaneIds();
+      if (firstPaneId === undefined) throw new Error("Expected a split pane");
+
+      fireEvent.click(
+        screen.getByRole("button", { name: `All panes ${firstPaneId}` }),
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: `Exit ${firstPaneId}` }),
+      );
+      fireEvent.click(
+        screen.getByRole("button", { name: `Maximize ${firstPaneId}` }),
+      );
+
+      expect(screen.getByTestId("full-screen").textContent).toBe("full screen");
+      expect(
+        document.querySelector(
+          `[data-split-pane-id="${firstPaneId}"][data-maximized="true"]`,
+        ),
+      ).not.toBeNull();
+    });
+
+    function containerElement(
+      isFullScreen: boolean,
+      onToggleFullScreen: () => void = vi.fn(),
+    ) {
+      return (
+        <SidebarProvider>
+          <TooltipProvider>
+            <SidebarSplitContainer
+              activeTabId="tab-a"
+              isFullScreen={isFullScreen}
+              onActivateTab={vi.fn()}
+              onGlobalTabReorder={vi.fn()}
+              onToggleFullScreen={onToggleFullScreen}
+              panelStateId={PANEL_STATE_ID}
+              renderPane={(pane) => <FullScreenPane {...pane} />}
+              tabs={TABS}
+            />
+          </TooltipProvider>
+        </SidebarProvider>
+      );
+    }
+
+    it("keeps every pane visible when the panel closes and reopens in full screen", () => {
+      persistState(setSidebarFullScreenScope(createTwoPaneState(), "panel"));
+      const view = render(containerElement(true));
+      expectEveryPaneVisible();
+
+      view.rerender(containerElement(false));
+      view.rerender(containerElement(true));
+
+      expectEveryPaneVisible();
+    });
+
+    it("maximizes one pane even after a declined all-panes request", () => {
+      persistState(createTwoPaneState());
+      const view = render(containerElement(false));
+      const [firstPaneId] = listPaneIds();
+      if (firstPaneId === undefined) throw new Error("Expected a split pane");
+      fireEvent.click(
+        screen.getByRole("button", { name: `All panes ${firstPaneId}` }),
+      );
+
+      fireEvent.click(
+        screen.getByRole("button", { name: `Maximize ${firstPaneId}` }),
+      );
+      view.rerender(containerElement(true));
+
+      expect(
+        document.querySelector(
+          `[data-split-pane-id="${firstPaneId}"][data-maximized="true"]`,
+        ),
+      ).not.toBeNull();
+    });
+
+    it("reports the all-panes scope to a lone pane", () => {
+      persistState(
+        setSidebarFullScreenScope(
+          createSidebarSplitState(
+            TABS.map((tab) => tab.id),
+            "tab-a",
+          ),
+          "panel",
+        ),
+      );
+      renderFullScreenHarness(true);
+      expect(screen.getAllByRole("button", { name: /^Exit / })).toHaveLength(1);
+      const seen: boolean[] = [];
+      cleanup();
+      persistState(
+        setSidebarFullScreenScope(
+          createSidebarSplitState(
+            TABS.map((tab) => tab.id),
+            "tab-a",
+          ),
+          "panel",
+        ),
+      );
+      renderContainer({
+        isFullScreen: true,
+        renderPane: ({ isFullScreenAllPanes }) => {
+          seen.push(isFullScreenAllPanes);
+          return null;
+        },
+      });
+      expect(seen.at(-1)).toBe(true);
+    });
+
+    it("restores every visible pane when a full screen thread reloads", () => {
+      persistState(createTwoPaneState());
+      const first = renderFullScreenHarness();
+      const [firstPaneId] = listPaneIds();
+      if (firstPaneId === undefined) throw new Error("Expected a split pane");
+      fireEvent.click(
+        screen.getByRole("button", { name: `All panes ${firstPaneId}` }),
+      );
+      first.unmount();
+
+      renderFullScreenHarness(true);
+
+      expect(screen.getByTestId("full-screen").textContent).toBe("full screen");
+      expectEveryPaneVisible();
+    });
+
+    it("keeps a new split visible beside the others", () => {
+      persistState(
+        setSidebarFullScreenScope(
+          createSidebarSplitState(
+            TABS.map((tab) => tab.id),
+            "tab-a",
+          ),
+          "panel",
+        ),
+      );
+      renderFullScreenHarness(true);
+
+      fireEvent.click(screen.getByRole("button", { name: /^Split / }));
+
+      expect(listPaneIds()).toHaveLength(2);
+      expectEveryPaneVisible();
+    });
   });
 
   it.each([
