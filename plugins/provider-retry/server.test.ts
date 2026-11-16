@@ -464,6 +464,7 @@ describe("provider retry plugin", () => {
       expect(explained.exitCode).toBe(0);
       const expected = {
         requestId: REQUEST_ID,
+        rateLimitKind: "subscription-window",
         availability,
         decision: { kind: scheduled ? "retry" : "decline", reason },
       };
@@ -479,6 +480,147 @@ describe("provider retry plugin", () => {
       await host.harness.dispose();
     },
   );
+
+  it.each([
+    {
+      name: "subscription window",
+      event: failure(),
+      kind: "subscription-window",
+      decision: {
+        kind: "retry",
+        reason: "Rate limited",
+        sendAt: RESET_AT_MS + RESET_BUFFER_MS,
+      },
+    },
+    ...(["credits", "spend-control", "unknown"] as const).map((kind) => ({
+      name: kind,
+      event: failure({ rateLimits: rateLimits({ kind }) }),
+      kind,
+      decision: { kind: "decline", reason: "not-resettable" },
+    })),
+    {
+      name: "missing quota",
+      event: failure({ rateLimits: null }),
+      kind: "unknown",
+      decision: { kind: "decline", reason: "no-rate-limit-state" },
+    },
+    {
+      name: "wrapped HTTP 429",
+      event: failure({
+        errorInfo: {
+          category: "too-many-failed-attempts",
+          providerCode: null,
+          httpStatusCode: 429,
+        },
+        rateLimits: null,
+      }),
+      kind: "unknown",
+      decision: { kind: "decline", reason: "no-rate-limit-state" },
+    },
+    {
+      name: "overload",
+      event: overloadedFailure(),
+      kind: null,
+      decision: {
+        kind: "retry",
+        reason: "Provider overloaded",
+        sendAt: NOW_MS + OVERLOAD_RETRY_BASE_MS,
+      },
+    },
+    {
+      name: "internal error with stale quota",
+      event: failure({
+        errorInfo: {
+          category: "internal",
+          providerCode: null,
+          httpStatusCode: 500,
+        },
+      }),
+      kind: null,
+      decision: { kind: "decline", reason: "not-retryable" },
+    },
+  ])(
+    "records the limit kind for $name without changing retries",
+    async ({ event, kind, decision }) => {
+      vi.spyOn(Math, "random").mockReturnValue(0);
+      const host = createHost();
+      try {
+        await plugin(host.bb);
+        expect(
+          decideRetry({
+            failure: event,
+            availability: { kind: "not-routed" },
+            maximumWaitMs: 6 * 3_600_000,
+            now: NOW_MS,
+            random: 0,
+          }),
+        ).toEqual(decision);
+        expect(
+          (await host.harness.behavior.emitThreadEvent("turn.failed", event))
+            .errors,
+        ).toEqual([]);
+        expect(host.retries).toEqual(
+          decision.kind === "retry"
+            ? [
+                {
+                  threadId: THREAD_ID,
+                  turnRequestId: REQUEST_ID,
+                  sendAt: decision.sendAt,
+                  reason: decision.reason,
+                },
+              ]
+            : [],
+        );
+        const explained = await host.harness.runCli([
+          "explain",
+          THREAD_ID,
+          "--json",
+        ]);
+        expect(explained.exitCode).toBe(0);
+        expect(explained.stdout).not.toBe("");
+        expect(JSON.parse(explained.stdout)).toMatchObject({
+          diagnostic: { rateLimitKind: kind, decision },
+        });
+        expect(
+          await host.harness.behavior.callRpc("decision.get", {
+            threadId: THREAD_ID,
+          }),
+        ).toMatchObject({ rateLimitKind: kind, decision });
+      } finally {
+        vi.restoreAllMocks();
+        await host.harness.dispose();
+      }
+    },
+  );
+
+  it("reads diagnostics recorded before the limit kind field existed", async () => {
+    const host = createHost();
+    await plugin(host.bb);
+    const old = {
+      requestId: REQUEST_ID,
+      observedAt: NOW_MS,
+      availability: { kind: "not-routed" },
+      decision: { kind: "decline", reason: "not-resettable" },
+    };
+    await host.bb.storage.kv.set(`decision:${THREAD_ID}`, old);
+    const explained = await host.harness.runCli([
+      "explain",
+      THREAD_ID,
+      "--json",
+    ]);
+    expect(explained.exitCode).toBe(0);
+    expect(explained.stdout).not.toBe("");
+    expect(JSON.parse(explained.stdout)).toEqual({
+      threadId: THREAD_ID,
+      diagnostic: old,
+    });
+    expect(
+      await host.harness.behavior.callRpc("decision.get", {
+        threadId: THREAD_ID,
+      }),
+    ).toEqual(old);
+    await host.harness.dispose();
+  });
 
   it("retries a pooled HTTP 429 wrapped by Codex native retry exhaustion", async () => {
     const host = createHost([], {

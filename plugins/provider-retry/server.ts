@@ -1,4 +1,5 @@
 import {
+  diagnosticRateLimitKind,
   readRetryDiagnostic,
   retryDiagnosticContract,
 } from "./src/diagnostics.js";
@@ -90,6 +91,7 @@ export default async function plugin(bb: BbPluginApi) {
       bb.storage.kv.set(`decision:${event.threadId}`, {
         requestId: event.requestId,
         observedAt: Date.now(),
+        rateLimitKind: diagnosticRateLimitKind(event),
         availability,
         decision,
       });
