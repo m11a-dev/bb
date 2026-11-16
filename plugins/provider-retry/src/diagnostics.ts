@@ -1,10 +1,33 @@
-import { defineRpcContract, type BbPluginApi } from "@get-bb/plugin-sdk";
+import {
+  defineRpcContract,
+  type PluginTurnFailedEvent,
+  type BbPluginApi,
+} from "@get-bb/plugin-sdk";
 import { z } from "zod";
 import { retryAvailabilitySchema } from "./retry-contract.js";
+
+import { isRateLimitFailure } from "./retry-policy.js";
+
+type RateLimitKind = NonNullable<PluginTurnFailedEvent["rateLimits"]>["kind"];
+const rateLimitKindSchema = z.enum({
+  "subscription-window": "subscription-window",
+  credits: "credits",
+  "spend-control": "spend-control",
+  unknown: "unknown",
+} satisfies { [Kind in RateLimitKind]: Kind });
+
+export function diagnosticRateLimitKind(
+  failure: PluginTurnFailedEvent,
+): RateLimitKind | null {
+  return isRateLimitFailure(failure)
+    ? (failure.rateLimits?.kind ?? "unknown")
+    : null;
+}
 
 export const retryDiagnosticSchema = z.object({
   requestId: z.string(),
   observedAt: z.number(),
+  rateLimitKind: rateLimitKindSchema.nullable().optional(),
   availability: retryAvailabilitySchema,
   decision: z.discriminatedUnion("kind", [
     z.object({ kind: z.literal("decline"), reason: z.string() }),

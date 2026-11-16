@@ -43,6 +43,7 @@ historical and survives restart, so use `status` for what is still pending.
 Decisions from before the plugin version that records them are not
 backfilled. The plugin RPC `decision.get` accepts `{ threadId }` and returns
 the same nullable diagnostic.
+`rateLimitKind` in `explain --json` and `decision.get` is `subscription-window`, `credits`, `spend-control`, or `unknown` for rate-limit failures, `null` for other failures, and absent on diagnostics recorded before this field was added.
 `retry` sends the pending row now; `cancel` deletes it. Inspect the failed turn
 before retrying manually, and avoid duplicating an existing queued retry. Use
 the core `bb thread retry` command for an intentional manual retry of a turn
