@@ -499,6 +499,16 @@ describe("provider retry plugin", () => {
       decision: { kind: "decline", reason: "not-resettable" },
     })),
     {
+      name: "an unrecognised runtime kind",
+      event: failure({
+        rateLimits: rateLimits({
+          kind: "weekly-cap" as unknown as "unknown",
+        }),
+      }),
+      kind: "unknown",
+      decision: { kind: "decline", reason: "not-resettable" },
+    },
+    {
       name: "missing quota",
       event: failure({ rateLimits: null }),
       kind: "unknown",
