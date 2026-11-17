@@ -19,9 +19,9 @@ const rateLimitKindSchema = z.enum({
 export function diagnosticRateLimitKind(
   failure: PluginTurnFailedEvent,
 ): RateLimitKind | null {
-  return isRateLimitFailure(failure)
-    ? (failure.rateLimits?.kind ?? "unknown")
-    : null;
+  if (!isRateLimitFailure(failure)) return null;
+  const kind = rateLimitKindSchema.safeParse(failure.rateLimits?.kind);
+  return kind.success ? kind.data : "unknown";
 }
 
 export const retryDiagnosticSchema = z.object({
