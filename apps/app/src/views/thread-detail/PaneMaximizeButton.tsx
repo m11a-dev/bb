@@ -35,14 +35,18 @@ const ARRANGEMENT_REGION_CLASS: Record<SplitSide, string> = {
   bottom: "inset-x-[3px] bottom-[3px] h-1.5",
 };
 
+const FULL_SCREEN_ALL_PANES_LABEL = "Full Screen all panes";
+
 export function resolvePaneArrangementLabel({
   isDesktopApp,
   isFullScreen,
+  isFullScreenAllPanes = false,
 }: {
   isDesktopApp: boolean;
   isFullScreen: boolean;
+  isFullScreenAllPanes?: boolean;
 }): string {
-  if (isDesktopApp) {
+  if (isDesktopApp || isFullScreenAllPanes) {
     return isFullScreen ? "Exit Full Screen" : "Full Screen";
   }
   return isFullScreen ? "Restore split" : "Maximize pane";
@@ -65,6 +69,19 @@ function ArrangementGlyph({ side }: { side: SplitSide }) {
   );
 }
 
+function AllPanesGlyph() {
+  return (
+    <span
+      data-pane-arrangement-glyph="all-panes"
+      aria-hidden
+      className="relative block size-4 shrink-0 rounded-[3px] border-[1.5px] border-current"
+    >
+      <span className="absolute inset-y-0 left-1/2 w-[1.5px] -translate-x-1/2 bg-current" />
+      <span className="absolute inset-x-0 top-1/2 h-[1.5px] -translate-y-1/2 bg-current" />
+    </span>
+  );
+}
+
 export function PaneMaximizeButton() {
   const { isMaximized, onToggleMaximize, onMoveToSide } = usePaneContext();
   const shortcut = useAppCommandShortcut("pane.maximize.toggle");
@@ -83,17 +100,26 @@ export function PaneMaximizeButton() {
 
 export function PaneArrangementButton({
   className,
+  fullScreenAllPanesShortcut,
   isFullScreen,
+  isFullScreenAllPanes = false,
   onMoveToSide,
   onToggleFullScreen,
-  shortcut,
+  onToggleFullScreenAllPanes,
+  shortcut: paneShortcut,
 }: {
   className?: string;
+  fullScreenAllPanesShortcut?: AppShortcutPresentation;
   isFullScreen: boolean;
+  isFullScreenAllPanes?: boolean;
   onMoveToSide?: (side: SplitSide) => void;
   onToggleFullScreen: () => void;
+  onToggleFullScreenAllPanes?: () => void;
   shortcut?: AppShortcutPresentation;
 }) {
+  const shortcut = isFullScreenAllPanes
+    ? fullScreenAllPanesShortcut
+    : paneShortcut;
   const {
     open: hoverOpen,
     triggerHoverProps,
@@ -104,6 +130,7 @@ export function PaneArrangementButton({
   const label = resolvePaneArrangementLabel({
     isDesktopApp: getBbDesktopInfo() !== null,
     isFullScreen,
+    isFullScreenAllPanes,
   });
   const accessibleLabel = shortcut ? `${label} (${shortcut.label})` : label;
   const menuOpen = !isFullScreen && hoverOpen;
@@ -188,6 +215,25 @@ export function PaneArrangementButton({
             <span className="text-subtle-foreground">{shortcut.label}</span>
           ) : null}
         </button>
+        {onToggleFullScreenAllPanes ? (
+          <button
+            type="button"
+            role="menuitem"
+            className={MENU_ITEM_CLASS}
+            onClick={() => {
+              handleOpenChange(false);
+              onToggleFullScreenAllPanes();
+            }}
+          >
+            <AllPanesGlyph />
+            <span className="flex-1">{FULL_SCREEN_ALL_PANES_LABEL}</span>
+            {fullScreenAllPanesShortcut ? (
+              <span className="text-subtle-foreground">
+                {fullScreenAllPanesShortcut.label}
+              </span>
+            ) : null}
+          </button>
+        ) : null}
         {onMoveToSide ? (
           <div className="border-t border-border-hairline pt-1.5">
             <div className="px-2 pb-0.5 text-2xs font-medium text-subtle-foreground">
